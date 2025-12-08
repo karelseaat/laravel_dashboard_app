@@ -1,0 +1,76 @@
+# Environment files
+.env
+.env.backup
+.env.production
+.env.local
+.env.*.local
+
+# IDE and editor
+.idea/
+.vscode/
+.fleet/
+.nova/
+.zed/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# PHP
+.phpunit.result.cache
+.phpunit.cache/
+.phpactor.json
+auth.json
+*.phar
+
+# Node and frontend
+node_modules/
+npm-debug.log
+yarn-error.log
+.env.local.php
+pnpm-lock.yaml
+
+# Laravel and dependencies
+vendor/
+composer.lock
+
+# Build output
+public/build/
+public/hot
+public/storage/
+storage/logs/
+storage/*.key
+storage/pail/
+storage/framework/cache/
+storage/framework/sessions/
+storage/framework/views/
+
+# Database
+database/database.sqlite
+database/database.sqlite-shm
+database/database.sqlite-wal
+*.db
+*.sqlite
+
+# Testing
+.phpunit.cache
+coverage/
+.coverage
+
+# Deployment
+Homestead.json
+Homestead.yaml
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+
+# Development
+.env.dusk.local
+.env.testing
+storage/debugbar/
