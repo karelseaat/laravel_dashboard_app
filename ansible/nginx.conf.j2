@@ -1,0 +1,27 @@
+server {
+    listen 80;
+    server_name your_domain.com; # IMPORTANT: Replace with your actual domain or IP address
+
+    root {{ deploy_dir }}/public;
+    index index.php index.html index.htm;
+
+    client_max_body_size 100M;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/var/run/php/php{{ php_version }}-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+    }
+
+    location ~ /\.env {
+        deny all;
+    }
+
+    location ~ /\.ht {
+        deny all;
+    }
+}

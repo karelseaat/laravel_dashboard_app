@@ -1,0 +1,165 @@
+---
+- name: Deploy Laravel Application
+  hosts: your_target_servers # Replace with your target host group or server IP
+  become: yes # Run tasks with sudo privileges
+
+  vars:
+    app_name: "feeds-and-speeds-calculator"
+    repo_url: "https://github.com/your-org/feeds-and-speeds-calculator.git" # IMPORTANT: Replace with your actual repository URL
+    repo_branch: "main" # Or 'master', 'develop', etc.
+    deploy_dir: "/var/www/{{ app_name }}"
+    php_version: "8.2" # Adjust if your PHP version is different (e.g., 8.1, 8.3)
+
+  tasks:
+    - name: Update apt cache (Debian/Ubuntu)
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      when: ansible_os_family == "Debian"
+
+    - name: Install common system packages and PHP extensions (Debian/Ubuntu)
+      apt:
+        name:
+          - git
+          - nginx
+          - "php{{ php_version }}-fpm"
+          - "php{{ php_version }}-mysql"
+          - "php{{ php_version }}-mbstring"
+          - "php{{ php_version }}-xml"
+          - "php{{ php_version }}-bcmath"
+          - "php{{ php_version }}-curl"
+          - "php{{ php_version }}-zip"
+          - "php{{ php_version }}-gd" # For image manipulation
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Install Composer
+      shell: |
+        php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+        php composer-setup.php --install-dir=/usr/local/bin --filename=composer
+        php -r "unlink('composer-setup.php');"
+      args:
+        creates: /usr/local/bin/composer
+
+    - name: Install Node.js and npm (using NodeSource)
+      shell: |
+        curl -fsSL https://deb.nodesource.com/setup_lts.x | bash -
+        apt-get install -y nodejs
+      args:
+        creates: /usr/bin/node
+      when: ansible_os_family == "Debian"
+
+    - name: Create deployment directory
+      file:
+        path: "{{ deploy_dir }}"
+        state: directory
+        owner: www-data
+        group: www-data
+        mode: '0755'
+
+    - name: Clone or update application repository
+      git:
+        repo: "{{ repo_url }}"
+        dest: "{{ deploy_dir }}"
+        version: "{{ repo_branch }}"
+        force: yes # Be careful with force:yes in production, consider alternative strategies for zero-downtime
+      register: git_pull
+
+    - name: Copy .env.example to .env if .env does not exist
+      copy:
+        src: "{{ deploy_dir }}/.env.example"
+        dest: "{{ deploy_dir }}/.env"
+        remote_src: yes
+        force: no # Only copy if target does not exist
+      args:
+        creates: "{{ deploy_dir }}/.env"
+
+    - name: Update .env file with actual database credentials (example, adjust as needed)
+      lineinfile:
+        path: "{{ deploy_dir }}/.env"
+        regexp: '^(DB_DATABASE|DB_USERNAME|DB_PASSWORD)='
+        line: '\g<1>=your_actual_value' # IMPORTANT: Replace 'your_actual_value' with actual secrets or use Ansible Vault
+        backrefs: yes
+      loop:
+        - DB_DATABASE
+        - DB_USERNAME
+        - DB_PASSWORD
+      # Consider using Ansible Vault for sensitive data
+      # For example: line: 'DB_DATABASE={{ vault_db_database }}'
+
+    - name: Set correct permissions for storage and bootstrap/cache
+      file:
+        path: "{{ deploy_dir }}/{{ item }}"
+        state: directory
+        owner: www-data
+        group: www-data
+        mode: '0775' # Adjust permissions as needed for security
+        recurse: yes
+      loop:
+        - storage
+        - bootstrap/cache
+
+    - name: Install Composer dependencies
+      composer:
+        command: install
+        working_dir: "{{ deploy_dir }}"
+        arguments: "--no-dev --optimize-autoloader"
+
+    - name: Generate Laravel application key
+      shell: php artisan key:generate --force
+      args:
+        chdir: "{{ deploy_dir }}"
+      environment:
+        APP_ENV: production
+
+    - name: Run database migrations
+      shell: php artisan migrate --force
+      args:
+        chdir: "{{ deploy_dir }}"
+      environment:
+        APP_ENV: production
+
+    - name: Install Node.js dependencies
+      community.general.npm: # Use community.general.npm module
+        path: "{{ deploy_dir }}"
+        production: yes # Install production dependencies only
+
+    - name: Build assets with npm (Laravel Mix/Vite)
+      community.general.npm: # Use community.general.npm module
+        path: "{{ deploy_dir }}"
+        script: build # Or 'prod' depending on your package.json scripts
+
+    - name: Configure Nginx for Laravel
+      template:
+        src: nginx.conf.j2 # This file will be created next
+        dest: "/etc/nginx/sites-available/{{ app_name }}"
+      notify: Reload Nginx
+
+    - name: Enable Nginx site
+      file:
+        src: "/etc/nginx/sites-available/{{ app_name }}"
+        dest: "/etc/nginx/sites-enabled/{{ app_name }}"
+        state: link
+      notify: Reload Nginx
+
+    - name: Remove default Nginx site
+      file:
+        path: "/etc/nginx/sites-enabled/default"
+        state: absent
+      notify: Reload Nginx
+
+  handlers:
+    - name: Reload Nginx
+      service:
+        name: nginx
+        state: reloaded
+
+    - name: Restart Nginx
+      service:
+        name: nginx
+        state: restarted
+
+    - name: Restart php-fpm
+      service:
+        name: "php{{ php_version }}-fpm"
+        state: restarted
