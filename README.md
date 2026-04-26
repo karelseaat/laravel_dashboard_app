@@ -133,3 +133,7 @@ To switch databases: update `DB_*` vars, run `php artisan migrate`.
 ---
 
 MIT license. Issues welcome.
+
+## More from Karelseaat
+
+For more projects and experiments, visit my GitHub Pages site: [karelseaat.github.io](https://karelseaat.github.io/)
