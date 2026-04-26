@@ -137,3 +137,15 @@ MIT license. Issues welcome.
 ## More from Karelseaat
 
 For more projects and experiments, visit my GitHub Pages site: [karelseaat.github.io](https://karelseaat.github.io/)
+
+<!-- KEEP-EXPLORING-START -->
+## Keep Exploring
+
+If you made it to the bottom, jump straight into a few related repos:
+
+- [Tenant Ops Console](https://github.com/karelseaat/tenant_ops_console)
+- [Monitoring Api](https://github.com/karelseaat/monitoring-api)
+- [Data Intake Hub](https://github.com/karelseaat/data_intake_hub)
+
+- [Full project index](https://karelseaat.github.io/)
+<!-- KEEP-EXPLORING-END -->
